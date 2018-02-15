@@ -82,19 +82,18 @@ func (m *Manager) Set(w http.ResponseWriter, r *http.Request, key, val string) e
 	var nk string
 	var ok bool
 	c, err := r.Cookie(m.name)
-	m.mu.Lock()
 	if err != nil {
+		s := newSession()
+		nk = m.newKey()
+		m.m[nk] = s
+	} else {
+		nk = c.Value
+	}
+	s, ok = m.m[nk]
+	if !ok {
 		s = newSession()
 		nk = m.newKey()
 		m.m[nk] = s
-		ok = true
-	} else {
-		nk = c.Value
-		s, ok = m.m[nk]
-	}
-	m.mu.Unlock()
-	if !ok {
-		return ErrInvalidSession
 	}
 	s.set(key, val)
 	http.SetCookie(w, &http.Cookie{
