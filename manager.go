@@ -83,7 +83,7 @@ func (m *Manager) Set(w http.ResponseWriter, r *http.Request, key, val string) e
 	var ok bool
 	c, err := r.Cookie(m.name)
 	if err != nil {
-		s := newSession()
+		s = newSession()
 		nk = m.newKey()
 		m.m[nk] = s
 	} else {

@@ -62,3 +62,45 @@ func TestManagerSet(t *testing.T) {
 		t.Errorf("set/get failed, got: %s, want: %s (ok==%t)", x, "bar", ok)
 	}
 }
+
+func TestInvalidSession(t *testing.T) {
+	sm := NewManager("mine")
+	s := newSession()
+	s.set("foo", "bar")
+	k := sm.newKey()
+	sm.m[k] = s
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "mine",
+		Value: k,
+	})
+
+	v, err := sm.Get(req, "foo")
+	if err != nil {
+		t.Error(err)
+	}
+	if v != "bar" {
+		t.Errorf("set/get failed, got: %s, want: %s", v, "bar")
+	}
+
+	nk := sm.newKey()
+	req, _ = http.NewRequest("GET", "/", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  "mine",
+		Value: nk,
+	})
+
+	v, err = sm.Get(req, "foo")
+	if err != ErrInvalidSession {
+		t.Errorf("invalid get, expected %s, got %s", ErrInvalidSession, err)
+	}
+
+	resp := httptest.NewRecorder()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		sm.Set(w, r, "foo", "bar")
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.ServeHTTP(resp, req)
+}
