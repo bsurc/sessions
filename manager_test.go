@@ -11,11 +11,13 @@ import (
 	"testing"
 )
 
+const managerKey = "buster"
+
 func TestManagerGetRequest(t *testing.T) {
-	sm := NewManager("foo")
+	sm := NewManager(managerKey)
 	r, _ := http.NewRequest("GET", "/", nil)
 	r.AddCookie(&http.Cookie{
-		Name:  "foo",
+		Name:  managerKey,
 		Value: "bar",
 	})
 	s := newSession()
@@ -30,8 +32,17 @@ func TestManagerGetRequest(t *testing.T) {
 	}
 }
 
+func TestManagerGetNothing(t *testing.T) {
+	sm := NewManager(managerKey)
+	req, _ := http.NewRequest("GET", "/", nil)
+	_, err := sm.Get(req, "")
+	if err != http.ErrNoCookie {
+		t.Errorf("invalid get, expected %s, got %s", http.ErrNoCookie, err)
+	}
+}
+
 func TestManagerSet(t *testing.T) {
-	sm := NewManager("mine")
+	sm := NewManager(managerKey)
 	resp := httptest.NewRecorder()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -49,8 +60,8 @@ func TestManagerSet(t *testing.T) {
 	hdr := resp.HeaderMap["Set-Cookie"][0]
 	tkns := strings.Split(hdr, ";")
 	ck := strings.Split(tkns[0], "=")
-	if ck[0] != "mine" {
-		t.Errorf("get/set failed, got: %s, want: %s", ck[0], "mine")
+	if ck[0] != managerKey {
+		t.Errorf("get/set failed, got: %s, want: %s", ck[0], managerKey)
 	}
 
 	s, ok := sm.m[ck[1]]
@@ -63,8 +74,8 @@ func TestManagerSet(t *testing.T) {
 	}
 }
 
-func TestInvalidSession(t *testing.T) {
-	sm := NewManager("mine")
+func TestInvalidKey(t *testing.T) {
+	sm := NewManager(managerKey)
 	s := newSession()
 	s.set("foo", "bar")
 	k := sm.newKey()
@@ -72,7 +83,25 @@ func TestInvalidSession(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", "/", nil)
 	req.AddCookie(&http.Cookie{
-		Name:  "mine",
+		Name:  managerKey,
+		Value: k,
+	})
+	_, err := sm.Get(req, "baz")
+	if err != ErrInvalidKey {
+		t.Errorf("invalid get, expected %s, got %s", ErrInvalidKey, err)
+	}
+}
+
+func TestInvalidSession(t *testing.T) {
+	sm := NewManager(managerKey)
+	s := newSession()
+	s.set("foo", "bar")
+	k := sm.newKey()
+	sm.m[k] = s
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  managerKey,
 		Value: k,
 	})
 
@@ -87,7 +116,7 @@ func TestInvalidSession(t *testing.T) {
 	nk := sm.newKey()
 	req, _ = http.NewRequest("GET", "/", nil)
 	req.AddCookie(&http.Cookie{
-		Name:  "mine",
+		Name:  managerKey,
 		Value: nk,
 	})
 
