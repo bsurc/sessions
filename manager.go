@@ -85,22 +85,21 @@ func (m *Manager) Set(w http.ResponseWriter, r *http.Request, key, val string) e
 	if err != nil {
 		s = newSession()
 		nk = m.newKey()
-		m.m[nk] = s
 	} else {
 		nk = c.Value
 	}
 	s, ok = m.m[nk]
 	if !ok {
 		s = newSession()
-		nk = m.newKey()
-		m.m[nk] = s
 	}
+	m.m[nk] = s
 	s.set(key, val)
-	http.SetCookie(w, &http.Cookie{
+	c = &http.Cookie{
 		Name:     m.name,
 		Value:    nk,
 		MaxAge:   2419200,
 		HttpOnly: true,
-	})
+	}
+	http.SetCookie(w, c)
 	return nil
 }
