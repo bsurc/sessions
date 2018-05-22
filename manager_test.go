@@ -132,4 +132,11 @@ func TestInvalidSession(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.ServeHTTP(resp, req)
+	c := resp.Header().Get("Set-Cookie")
+	if c == "" {
+		t.Fatal("failed to set cookie")
+	}
+	if strings.Index(c, nk) < 0 {
+		t.Error("failed to set cookie properly")
+	}
 }
