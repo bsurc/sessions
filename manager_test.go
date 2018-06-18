@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 const managerKey = "buster"
@@ -139,4 +140,21 @@ func TestInvalidSession(t *testing.T) {
 	if strings.Index(c, nk) < 0 {
 		t.Error("failed to set cookie properly")
 	}
+}
+
+func TestExpunge(t *testing.T) {
+	sm := NewManager(managerKey)
+	sm.maxAge = time.Second
+	s := newSession()
+	s.set("foo", "bar")
+	k := sm.newKey()
+	sm.m[k] = s
+	if _, ok := sm.m[k]; !ok {
+		t.Error("session should be alive")
+	}
+	time.Sleep(2 * time.Second)
+	if s, ok := sm.m[k]; ok {
+		t.Errorf("session %#v should be cleared", s)
+	}
+
 }

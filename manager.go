@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 )
 
 // defaultKeySize is the default number of bytes to user for the cookie value
@@ -34,15 +35,24 @@ type Manager struct {
 	name string
 	// keySize is the length in bytes of the key, randomly generated
 	keySize int
+	// maxAge is the lifetime of the session, the sessions are cleared if they
+	// aren't accessed within this lifetime.
+	maxAge time.Duration
+	// c is a channel to kill the flushing of expired sessions
+	c chan struct{}
 }
 
 // NewManager creates a safe to use Manager by initializing the map
 func NewManager(name string) *Manager {
-	return &Manager{
+	m := &Manager{
 		m:       map[string]*session{},
 		name:    name,
 		keySize: defaultKeySize,
+		// TODO(kyle): allow this to be set
+		maxAge: 2419200,
 	}
+	go m.StartExpunge()
+	return m
 }
 
 var (
@@ -54,6 +64,28 @@ var (
 	ErrInvalidKey = errors.New("invalid key")
 )
 
+func (m *Manager) StartExpunge() {
+	t := time.NewTicker(m.maxAge / 4)
+	for {
+		select {
+		case <-t.C:
+			m.mu.Lock()
+			for k, v := range m.m {
+				if time.Now().After(v.accessed.Add(m.maxAge)) {
+					delete(m.m, k)
+				}
+			}
+			m.mu.Unlock()
+		case <-m.c:
+			return
+		}
+	}
+}
+
+func (m *Manager) StopExpunge() {
+	m.c <- struct{}{}
+}
+
 // Get reads a cookie from a request, queries the session manager and returns
 // the value if available.  If the session is invalid ErrInvalidSession is
 // returnted, if the key is invalid, ErrInvalidKey is returned.
@@ -64,6 +96,7 @@ func (m *Manager) Get(r *http.Request, key string) (string, error) {
 	}
 	m.mu.Lock()
 	s, ok := m.m[c.Value]
+	s.accessed = time.Now()
 	m.mu.Unlock()
 	if !ok {
 		return "", ErrInvalidSession
@@ -97,7 +130,7 @@ func (m *Manager) Set(w http.ResponseWriter, r *http.Request, key, val string) e
 	c = &http.Cookie{
 		Name:     m.name,
 		Value:    nk,
-		MaxAge:   2419200,
+		MaxAge:   int(m.maxAge.Seconds()),
 		HttpOnly: true,
 	}
 	http.SetCookie(w, c)
