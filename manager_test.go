@@ -159,5 +159,4 @@ func TestExpunge(t *testing.T) {
 	if s, ok := sm.m[k]; ok {
 		t.Errorf("session %#v should be cleared", s)
 	}
-
 }

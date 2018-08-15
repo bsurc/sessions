@@ -55,7 +55,7 @@ func NewManager(name string) *Manager {
 		name:    name,
 		keySize: defaultKeySize,
 		// TODO(kyle): allow this to be set
-		maxAge: 2419200,
+		maxAge: 2419200 * time.Second,
 	}
 	go m.StartExpunge()
 	return m
@@ -71,7 +71,7 @@ var (
 )
 
 func (m *Manager) StartExpunge() {
-	t := time.NewTicker(time.Second * (m.maxAge / 4))
+	t := time.NewTicker(m.maxAge / 4)
 	for {
 		select {
 		case <-t.C:
