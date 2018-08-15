@@ -4,7 +4,10 @@
 
 package sessions
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // session is a safe to use session for web apps
 type session struct {
@@ -12,6 +15,8 @@ type session struct {
 	sync.Mutex
 	// m stores session data
 	m map[string]string
+	// age is the last time the session was accessed
+	accessed time.Time
 }
 
 // newSession initializes the map of a session and returns a valid new session
@@ -25,6 +30,7 @@ func newSession() *session {
 func (s *session) get(key string) (string, bool) {
 	s.Lock()
 	x, ok := s.m[key]
+	s.accessed = time.Now()
 	s.Unlock()
 	return x, ok
 }
@@ -33,6 +39,7 @@ func (s *session) get(key string) (string, bool) {
 func (s *session) set(key, val string) error {
 	s.Lock()
 	s.m[key] = val
+	s.accessed = time.Now()
 	s.Unlock()
 	return nil
 }
