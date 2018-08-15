@@ -96,7 +96,6 @@ func (m *Manager) Get(r *http.Request, key string) (string, error) {
 	}
 	m.mu.Lock()
 	s, ok := m.m[c.Value]
-	s.accessed = time.Now()
 	m.mu.Unlock()
 	if !ok {
 		return "", ErrInvalidSession
@@ -105,6 +104,7 @@ func (m *Manager) Get(r *http.Request, key string) (string, error) {
 	if !ok {
 		return "", ErrInvalidKey
 	}
+	s.accessed = time.Now()
 	return v, nil
 }
 
