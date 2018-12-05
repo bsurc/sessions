@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -17,9 +16,6 @@ import (
 const (
 	// defaultKeySize is the default number of bytes to user for the cookie value
 	defaultKeySize = 32
-
-	// debug prints debugging info to log
-	debug = false
 )
 
 // newKey generates a random value for a cookie
@@ -79,9 +75,6 @@ func (m *Manager) StartExpunge() {
 			m.mu.Lock()
 			for k, v := range m.m {
 				if time.Now().After(v.accessed.Add(m.maxAge)) {
-					if debug {
-						log.Printf("expunging session %s: %#v", k, v)
-					}
 					delete(m.m, k)
 				}
 			}
@@ -100,10 +93,6 @@ func (m *Manager) StopExpunge() {
 // the value if available.  If the session is invalid ErrInvalidSession is
 // returnted, if the key is invalid, ErrInvalidKey is returned.
 func (m *Manager) Get(r *http.Request, key string) (string, error) {
-	if debug {
-		log.Printf("attempting to fetch %s", key)
-		log.Printf("state: %s", m.state())
-	}
 	c, err := r.Cookie(m.name)
 	if err != nil {
 		return "", err
@@ -128,10 +117,6 @@ func (m *Manager) Set(w http.ResponseWriter, r *http.Request, key, val string) e
 	var s *session
 	var nk string
 	var ok bool
-	if debug {
-		log.Printf("setting %s to %s", key, val)
-		log.Printf("state before: %s", m.state())
-	}
 	c, err := r.Cookie(m.name)
 	if err != nil {
 		s = newSession()
@@ -152,23 +137,5 @@ func (m *Manager) Set(w http.ResponseWriter, r *http.Request, key, val string) e
 		HttpOnly: true,
 	}
 	http.SetCookie(w, c)
-	if debug {
-		log.Printf("state after: %s", m.state())
-	}
 	return nil
-}
-
-// state dumps the current state of the manager and sessions to the stdout log
-func (m *Manager) state() string {
-	s := fmt.Sprintf("name: %s\n", m.name)
-	s += fmt.Sprintf("max-age: %d\n", m.maxAge)
-	s += "sessions:\n"
-	for k, v := range m.m {
-		s += fmt.Sprintf("\tkey: %s\n", k)
-		s += "\tkey\tvalue\n"
-		for kk, vv := range v.m {
-			s += fmt.Sprintf("\t%s\t%s\n", kk, vv)
-		}
-	}
-	return s
 }
