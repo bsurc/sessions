@@ -56,6 +56,7 @@ func NewManager(name string) *Manager {
 		keySize: defaultKeySize,
 		// TODO(kyle): allow this to be set
 		maxAge: 2419200 * time.Second,
+		c:      make(chan struct{}),
 	}
 	go m.StartExpunge()
 	return m

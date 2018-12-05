@@ -160,3 +160,19 @@ func TestExpunge(t *testing.T) {
 		t.Errorf("session %#v should be cleared", s)
 	}
 }
+
+func TestExpungeStop(t *testing.T) {
+	sm := NewManager(managerKey)
+	sm.maxAge = 100 * time.Millisecond
+	sm.StopExpunge()
+	s := newSession()
+	s.set("foo", "bar")
+	k := sm.newKey()
+	sm.m[k] = s
+
+	time.Sleep(250 * time.Millisecond)
+
+	if _, ok := sm.m[k]; !ok {
+		t.Error("session should be alive")
+	}
+}
