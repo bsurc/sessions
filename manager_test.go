@@ -144,18 +144,18 @@ func TestInvalidSession(t *testing.T) {
 
 func TestExpunge(t *testing.T) {
 	sm := NewManager(managerKey)
-	sm.maxAge = 2 * time.Second
+	sm.maxAge = 500 * time.Millisecond
 	s := newSession()
 	s.set("foo", "bar")
 	k := sm.newKey()
 	sm.m[k] = s
 
-	time.Sleep(time.Second)
+	time.Sleep(250 * time.Millisecond)
 
 	if _, ok := sm.m[k]; !ok {
 		t.Error("session should be alive")
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(300 * time.Millisecond)
 	if s, ok := sm.m[k]; ok {
 		t.Errorf("session %#v should be cleared", s)
 	}
